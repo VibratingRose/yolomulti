@@ -38,7 +38,7 @@ class DetectMultiBackend(nn.Module):
         #   TensorFlow GraphDef:            *.pb
         #   TensorFlow Lite:                *.tflite
         #   TensorFlow Edge TPU:            *_edgetpu.tflite
-        from models.experimental import (  # scoped to avoid circular import
+        from yolo.models.experimental import (  # scoped to avoid circular import
             attempt_download, attempt_load)
 
         super().__init__()

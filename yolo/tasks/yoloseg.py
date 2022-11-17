@@ -1,7 +1,7 @@
 from yolo.datasets.segdatasets import get_dataloader as segloader
 from yolo.loss import SegLoss
 from yolo.metrics.seg_metrics import iou_fg
-from yolo.utils.general import check_dataset, check_img_size
+from yolo.utils.general import check_dataset
 
 from .base import Base
 from yolo.utils.register import Tasks
