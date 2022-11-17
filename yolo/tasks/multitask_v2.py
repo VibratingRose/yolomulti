@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 
 from yolo.datasets.segdatasets import get_dataloader as segloader
 from yolo.loss import ComputeLoss, SegLoss
