@@ -29,10 +29,11 @@ class MultiTaskv2(YoloLightning):
         det_loss = super().training_step(det_batch, batch_idx)['loss']
         seg_loss = self.seg_training_step(seg_batch, batch_idx)['loss']
 
-        losses = torch.tensor([det_loss, seg_loss], requires_grad=True)
-        # losses = (losses/(2*self.loss_scale.exp())+self.loss_scale/2).sum()
-        weight = 1 / losses.detach().softmax(-1)
-        losses = (weight * losses).sum() / weight.sum()
+        losses = (1 - self.opt.seg_weight) * det_loss + self.opt.seg_weight * seg_loss
+        # losses = torch.tensor([det_loss, seg_loss], requires_grad=True)
+        # # losses = (losses/(2*self.loss_scale.exp())+self.loss_scale/2).sum()
+        # weight = 1 / losses.detach().softmax(-1)
+        # losses = (weight * losses).sum() / weight.sum()
         return {'loss': losses}
     
     def validation_step(self, batch, batch_idx, dataloader_idx):
