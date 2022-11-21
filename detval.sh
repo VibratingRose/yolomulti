@@ -1,6 +1,6 @@
-python3 yolov5/val.py --weights /home/muchun/yolov5/lightning_logs/version_2/detseg_last.pt \
+python3 yolo/tools/val.py --weights /home/muchun/yolov5/lightning_logs/version_1/last.pt \
                 --data data/electronNetProject.yaml \
-                --project ele/val \
+                --project val/val \
                 --save-txt \
                 --save-conf \
                 --device 0

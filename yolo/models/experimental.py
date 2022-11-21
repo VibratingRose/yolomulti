@@ -76,7 +76,8 @@ class Ensemble(nn.ModuleList):
 
 def attempt_load(weights, device=None, inplace=True, fuse=True):
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
-    from yolov5.models.yolo import Detect, Model
+    from yolo.models.head import Detect
+    from yolo.models.Builder import Model
 
     model = Ensemble()
     for w in weights if isinstance(weights, list) else [weights]:

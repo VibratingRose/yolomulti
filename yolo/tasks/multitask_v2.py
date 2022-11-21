@@ -7,6 +7,8 @@ from yolo.utils.general import check_dataset, check_img_size
 from yolo.utils.register import Tasks
 
 from .yolo_lightning import YoloLightning
+from yolo.utils.torch_utils import smart_optimizer_v1
+from torch.optim import lr_scheduler
 
 
 @Tasks.register
@@ -16,7 +18,8 @@ class MultiTaskv2(YoloLightning):
         if hasattr(self, 'opt'):
             self.opt = kwargs['opt']
             self.config()
-            bce_weight = self.opt.bce_weight if hasattr(self.opt, 'bce_weight') else 0.7
+            bce_weight = self.opt.bce_weight if hasattr(
+                self.opt, 'bce_weight') else 0.7
             self.seg_loss = SegLoss(bce_weight)
             self.mannul_load_ckpt(self.opt.weights)
             self.mannul_freeze(self.opt.freeze)
@@ -24,18 +27,19 @@ class MultiTaskv2(YoloLightning):
 
     def training_step(self, batch, batch_idx):
         det_batch, seg_batch = batch
-        assert 0<self.opt.seg_weight and self.opt.seg_weight <=1, "seg_weight error"
+        assert 0 < self.opt.seg_weight and self.opt.seg_weight <= 1, "seg_weight error"
 
         det_loss = super().training_step(det_batch, batch_idx)['loss']
         seg_loss = self.seg_training_step(seg_batch, batch_idx)['loss']
 
-        losses = (1 - self.opt.seg_weight) * det_loss + self.opt.seg_weight * seg_loss
+        losses = self.opt.det_weight * det_loss + \
+            self.opt.seg_weight * seg_loss
         # losses = torch.tensor([det_loss, seg_loss], requires_grad=True)
         # # losses = (losses/(2*self.loss_scale.exp())+self.loss_scale/2).sum()
         # weight = 1 / losses.detach().softmax(-1)
         # losses = (weight * losses).sum() / weight.sum()
         return {'loss': losses}
-    
+
     def validation_step(self, batch, batch_idx, dataloader_idx):
         if dataloader_idx == 0:
             output = super().validation_step(batch, batch_idx)
@@ -48,11 +52,13 @@ class MultiTaskv2(YoloLightning):
         imgs = imgs / 255.0
         preds = self(imgs)[-1]
         loss = self.seg_loss(preds, labels)
-        self.log("seg_loss", loss, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+        self.log("seg_loss", loss, prog_bar=True,
+                 sync_dist=True, add_dataloader_idx=False)
 
         if acc:
             acc = iou_fg(preds, labels)
-            self.log("seg_acc", acc, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+            self.log("seg_acc", acc, prog_bar=True,
+                     sync_dist=True, add_dataloader_idx=False)
         return {'loss': loss}
 
     def validation_epoch_end(self, outputs):
@@ -72,12 +78,35 @@ class MultiTaskv2(YoloLightning):
         det_val_loader = super().val_dataloader()
         seg_val_loader = self.seg_val_dataloader()
         return det_val_loader, seg_val_loader
-    
+
     def seg_val_dataloader(self):
         opt = self.opt
         seg_val_loader = segloader(
             self.data_dict['seg_val'], opt.batch_size, opt.workers, "val")
         return seg_val_loader
+
+    def configure_optimizers(self):
+        backbone_lr_ratio = getattr(self.opt, 'backbone_lr_ratio', -1)
+        if backbone_lr_ratio < 0:
+            return super().configure_optimizers()
+        else:
+            opt = self.opt
+            hyp = self.hyp
+            # backbone_index = opt.backbone_index
+            backbone_index = getattr(self.opt, 'backbone_index', 0)
+            if backbone_lr_ratio == 0:
+                backbone_lr_ratio = self.opt.seg_weight + self.opt.seg_weight
+            optimizer = smart_optimizer_v1(self.model,
+                                           opt.optimizer,
+                                           backbone_lr_ratio,
+                                           backbone_index,
+                                           hyp['lr0'],
+                                           hyp['momentum'],
+                                           hyp['weight_decay'])
+
+            scheduler = lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=opt.epochs, eta_min=0.01 * hyp['lr0'])
+            return [optimizer], [scheduler]
 
     def config(self):
         opt = self.opt

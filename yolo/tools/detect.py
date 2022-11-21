@@ -34,15 +34,15 @@ import torch.backends.cudnn as cudnn
 
 from yolo.models.multibackends import DetectMultiBackend
 from yolo.utils.dataloaders import (IMG_FORMATS, VID_FORMATS, LoadImages,
-                                      LoadStreams)
+                                    LoadStreams)
 from yolo.utils.general import (LOGGER, check_file, check_img_size,
-                                  check_imshow, check_requirements, colorstr,
-                                  cv2, increment_path, non_max_suppression,
-                                  print_args, scale_coords, strip_optimizer,
-                                  xyxy2xywh)
+                                check_imshow, check_requirements, colorstr,
+                                cv2, increment_path, non_max_suppression,
+                                print_args, scale_coords, strip_optimizer,
+                                xyxy2xywh)
 from yolo.utils.plots import Annotator, colors, save_one_box
 from yolo.utils.torch_utils import (select_device, smart_inference_mode,
-                                      time_sync)
+                                    time_sync)
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -143,6 +143,7 @@ def run(
                 s += f'{i}: '
             else:
                 p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
+                im0 = cv2.imread(f"/home/muchun/yolov5/version_1/masked_frames_v1/{Path(path).stem}.jpg")
 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg

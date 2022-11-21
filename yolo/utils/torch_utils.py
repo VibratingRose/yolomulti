@@ -344,6 +344,51 @@ def smart_optimizer(model, name='Adam', lr=0.001, momentum=0.9, decay=1e-5):
     return optimizer
 
 
+def smart_optimizer_v1(model, name='Adam', backbone_lr_ratio=1.0, backbone_index=-1, lr=0.001, momentum=0.9, decay=1e-5):
+    # YOLOv5 3-param group optimizer: 0) weights with decay, 1) weights no decay, 2) biases no decay
+    g = [], [], [], [], [], []  # optimizer parameter groups
+    bn = tuple(v for k, v in nn.__dict__.items() if 'Norm' in k)  # normalization layers, i.e. BatchNorm2d()
+    if backbone_index <= 0:
+        from yolo.models.bricks.common import SPPF, SPP
+        for i, (k, v) in enumerate(model.model.named_children()):
+            if isinstance(v, (SPPF, SPP)):
+                backbone_index = i
+                break
+    
+    backbone_lr = lr / backbone_lr_ratio 
+    for k, v in model.named_modules():
+        is_backbone = len(k.split('.')) > 2 and int(k.split('.')[1]) in list(range(backbone_index))
+        if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):  # bias (no decay)
+            g[2 + is_backbone * 3].append(v.bias)
+        if isinstance(v, bn):  # weight (no decay)
+            g[1 + is_backbone * 3].append(v.weight)
+        elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):  # weight (with decay)
+            g[0 + is_backbone * 3].append(v.weight)
+
+    if name == 'Adam':
+        optimizer = torch.optim.Adam(g[2], lr=lr, betas=(momentum, 0.999))  # adjust beta1 to momentum
+        optimizer = torch.optim.Adam(g[5], lr=backbone_lr, betas=(momentum, 0.999))  # adjust beta1 to momentum
+    elif name == 'AdamW':
+        optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
+        optimizer = torch.optim.AdamW(g[5], lr=backbone_lr, betas=(momentum, 0.999), weight_decay=0.0)
+    elif name == 'RMSProp':
+        optimizer = torch.optim.RMSprop(g[2], lr=lr, momentum=momentum)
+        optimizer = torch.optim.RMSprop(g[2], lr=backbone_lr, momentum=momentum)
+    elif name == 'SGD':
+        optimizer = torch.optim.SGD(g[2], lr=lr, momentum=momentum, nesterov=True)
+        optimizer = torch.optim.SGD(g[2], lr=backbone_lr, momentum=momentum, nesterov=True)
+    else:
+        raise NotImplementedError(f'Optimizer {name} not implemented.')
+
+    optimizer.add_param_group({'params': g[0], 'lr':lr, 'weight_decay': decay})  # add g0 with weight_decay
+    optimizer.add_param_group({'params': g[1], 'lr':lr, 'weight_decay': 0.0})  # add g1 (BatchNorm2d weights)
+    optimizer.add_param_group({'params': g[3], 'lr': backbone_lr, 'weight_decay': decay})  # add g0 with weight_decay
+    optimizer.add_param_group({'params': g[4], 'lr': backbone_lr, 'weight_decay': 0.0})  # add g1 (BatchNorm2d weights)
+    LOGGER.info(f"{colorstr('optimizer:')} {type(optimizer).__name__}(lr={lr}) with parameter groups "
+                f"{len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={decay}), {len(g[2])} bias")
+    return optimizer
+
+
 def smart_hub_load(repo='ultralytics/yolov5', model='yolov5s', **kwargs):
     # YOLOv5 torch.hub.load() wrapper with smart error/issue handling
     if check_version(torch.__version__, '1.9.1'):

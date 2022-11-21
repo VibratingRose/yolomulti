@@ -62,10 +62,10 @@ ROOT = FILE.parents[0]  # YOLOv5 root directory
 
 from yolo.models.experimental import attempt_load
 from yolo.models.head import Detect
-from utils.dataloaders import LoadImages
-from utils.general import (LOGGER, check_dataset, check_img_size, check_requirements, check_version, check_yaml,
+from yolo.utils.dataloaders import LoadImages
+from yolo.utils.general import (LOGGER, check_dataset, check_img_size, check_requirements, check_version, check_yaml,
                            colorstr, file_size, print_args, url2file)
-from utils.torch_utils import select_device, smart_inference_mode
+from yolo.utils.torch_utils import select_device, smart_inference_mode
 
 
 def export_formats():

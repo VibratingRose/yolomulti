@@ -72,7 +72,7 @@ class Base(pl.LightningModule):
     def on_train_end(self):
         # 为了方便直接调用yolov5的部分函数
         last_name = f"{Path(self.trainer.log_dir)}/last.pt"
-        torch.save({"model": self.model}, last_name)
+        torch.save({"model": self.model, 'opt': self.opt}, last_name)
 
     def optimizer_step(self,
                        epoch,
@@ -85,14 +85,16 @@ class Base(pl.LightningModule):
                        using_lbfgs=False,
                        ):
         # 前300个step采用直线的warmp
-        optimizer.step(closure=optimizer_closure)
-
         warmup_steps = self.opt.warmup_steps
-        if warmup_steps > 0:
-            if self.trainer.global_step < warmup_steps:
-                lr_scale = min(1.0, float(self.trainer.global_step + 1) / warmup_steps)
-                for pg in optimizer.param_groups:
-                    pg["lr"] = lr_scale * self.hyp['lr0']
+        if warmup_steps > 0 and self.trainer.global_step <= warmup_steps:
+            for pg in optimizer.param_groups:
+                delta = (pg['initial_lr'] - pg['initial_lr'] / 100) / warmup_steps
+                pg["lr"] = pg['initial_lr'] / 100 + delta * self.trainer.global_step
+                if 'delta' not in pg.keys():
+                    pg['delta'] = delta
+
+        optimizer.step(closure=optimizer_closure)
+        
 
     def mannul_freeze(self, freeze_list=[0]):
         """

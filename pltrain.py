@@ -89,9 +89,14 @@ def get_args(known=False):
     # for multitasks
     parser.add_argument('--seg_weight', type=float, default=1.0,
                         help='the weight for segmentation loss')
+    parser.add_argument('--det_weight', type=float, default=1.0,
+                        help='the weight for segmentation loss')
     parser.add_argument('--bce_weight', type=float, default=0.7, help="the bce weight for seg_loss")
     parser.add_argument('--split_train', action='store_true',
                         help='to train det and seg in different batch')
+
+    parser.add_argument('--backbone_lr_ratio', type=float, default=0, help='to train det and seg in different batch')
+    parser.add_argument('--backbone_index',type=int, default=0, help='to train det and seg in different batch')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 

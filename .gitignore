@@ -1,5 +1,10 @@
 # Repo-specific GitIgnore ----------------------------------------------------------------------------------------------
 trainning_note.md
+scripts/
+val/
+version_1/
+test_result.mp4
+weights/
 *.jpg
 *.jpeg
 *.png
@@ -35,6 +40,8 @@ data/images/*
 !data/images/zidane.jpg
 !data/images/bus.jpg
 !data/*.sh
+scripts/
+version_1/
 
 results*.csv
 train*.sh
