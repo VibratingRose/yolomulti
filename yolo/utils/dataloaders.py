@@ -453,14 +453,12 @@ class LoadImagesAndLabels(Dataset):
                     f += glob.glob(str(p / '**' / '*.*'), recursive=True)
                     # f = list(p.rglob('*.*'))  # pathlib
                 elif p.is_file():  # file
-                    with open(p) as t:
-                        t = t.read().strip().splitlines()
-                        parent = str(p.parent) + os.sep
-                        f += [x.replace('./', parent) if x.startswith('./') else x for x in t]  # local to global path
-                        # f += [p.parent / x.lstrip(os.sep) for x in t]  # local to global path (pathlib)
+                    lines = p.read_text().splitlines()
+                    lines = [f"{p.parent / x.strip()}" if not x.startswith('/') else x for x in lines]  # local to global path
+                    f += lines
                 else:
                     raise FileNotFoundError(f'{prefix}{p} does not exist')
-            self.im_files = sorted(x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in IMG_FORMATS)
+            self.im_files = sorted(x.replace('/', os.sep) for x in f if Path(x).suffix.lower()[1:] in IMG_FORMATS)
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
             assert self.im_files, f'{prefix}No images found'
         except Exception as e:
@@ -669,9 +667,9 @@ class LoadImagesAndLabels(Dataset):
                     labels[:, 1] = 1 - labels[:, 1]
             
             # Flip channel
-            flipchannel = hyp.get('flipchannel', 0)
-            if random.random() < hyp['flipchannel']:
-                img = img[...,::-1]
+            # flipchannel = hyp.get('flipchannel', 0)
+            # if random.random() < hyp['flipchannel']:
+            #     img = img[...,::-1]
             # Cutouts
             # labels = cutout(img, labels, p=0.5)
             # nl = len(labels)  # update after cutout

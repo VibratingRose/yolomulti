@@ -29,17 +29,19 @@ import os
 import platform
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
-from yolo.models.multibackends_v2 import DetectMultiBackendv2 as DetectMultiBackend
+from yolo.models.multibackends_v2 import \
+    DetectMultiBackendv2 as DetectMultiBackend
 from yolo.utils.dataloaders import (IMG_FORMATS, VID_FORMATS, LoadImages,
                                     LoadStreams)
 from yolo.utils.general import (LOGGER, check_file, check_img_size,
                                 check_imshow, check_requirements, colorstr,
                                 cv2, increment_path, non_max_suppression,
                                 print_args, scale_coords, strip_optimizer,
-                                xyxy2xywh)
+                                xyxy2xywh, scale_masks)
 from yolo.utils.plots import Annotator, colors, save_one_box
 from yolo.utils.torch_utils import (select_device, smart_inference_mode,
                                     time_sync)
@@ -81,6 +83,7 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         multi_task=False,
 ):
+    half = False
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -116,7 +119,7 @@ def run(
     for path, im, im0s, vid_cap, s in dataset:
         t1 = time_sync()
         im = torch.from_numpy(im).to(device)
-        im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
+        im = im.half() if half else im.float()  # uint8 to fp16/32
         im /= 255  # 0 - 255 to 0.0 - 1.0
         if len(im.shape) == 3:
             im = im[None]  # expand for batch dim
@@ -148,6 +151,15 @@ def run(
             else:
                 p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
                 # im0 = cv2.imread(f"/home/muchun/yolov5/version_1/masked_frames_v1/{Path(path).stem}.jpg")
+            
+            if seg_pred is not None:
+                # NOTE I just consider one category
+                mask = (seg_pred[i, 0, ...] > 0).cpu().numpy().astype(np.uint8)
+                mask = scale_masks(mask, im0.shape)
+                mask = np.array([[0,0,0], [0, 255, 0]])[mask]
+                mask = mask.astype(np.uint8)
+                img_mask = cv2.addWeighted(im0, 1, mask, 0.4, gamma=1)
+                im0 = img_mask
 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg
@@ -158,6 +170,7 @@ def run(
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
             if len(det):
                 # Rescale boxes from img_size to im0 size
+                # im0, the original image with different shape
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
                 # Print results
@@ -250,6 +263,7 @@ def parse_opt():
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
     parser.add_argument('--dnn', action='store_true', help='use OpenCV DNN for ONNX inference')
+    parser.add_argument('--multi_task', action='store_true', help='use multitask')
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))

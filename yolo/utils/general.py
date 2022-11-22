@@ -795,6 +795,27 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     return coords
 
 
+def scale_masks(mask, img0_shape, ratio_pad=None):
+    if mask.ndim == 2:
+        h, w = mask.shape
+    elif mask.ndim == 3:
+        h, w, _ = mask.shape
+
+    if ratio_pad is None:
+        gain = min(h / img0_shape[0], w / img0_shape[1])  # gain  = old / new
+        pad = (w - img0_shape[1] * gain) / 2, (h - img0_shape[0] * gain) / 2  # wh padding
+    else:
+        gain = ratio_pad[0][0]
+        pad = ratio_pad[1]
+    pad = [int(pad[0]), int(pad[1])]
+    nh = int(img0_shape[0] * gain)
+    nw = int(img0_shape[1] * gain)
+    
+    nmask = mask[pad[1]: nh+pad[1], pad[0]: nw+pad[0]]
+    nmask = cv2.resize(nmask, (img0_shape[1], img0_shape[0]), interpolation=cv2.INTER_NEAREST)
+    return nmask
+
+
 def clip_coords(boxes, shape):
     # Clip bounding xyxy bounding boxes to image shape (height, width)
     if isinstance(boxes, torch.Tensor):  # faster individually
