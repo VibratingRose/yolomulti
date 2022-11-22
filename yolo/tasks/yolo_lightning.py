@@ -1,8 +1,8 @@
 import os
+from functools import reduce
 
 import numpy as np
 import torch
-from functools import reduce
 
 from yolo.loss import ComputeLoss
 from yolo.models.Builder import Model

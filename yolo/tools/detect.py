@@ -32,7 +32,7 @@ from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
 
-from yolo.models.multibackends import DetectMultiBackend
+from yolo.models.multibackends_v2 import DetectMultiBackendv2 as DetectMultiBackend
 from yolo.utils.dataloaders import (IMG_FORMATS, VID_FORMATS, LoadImages,
                                     LoadStreams)
 from yolo.utils.general import (LOGGER, check_file, check_img_size,
@@ -79,6 +79,7 @@ def run(
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
         dnn=False,  # use OpenCV DNN for ONNX inference
+        multi_task=False,
 ):
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -124,7 +125,10 @@ def run(
 
         # Inference
         visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
-        pred = model(im, augment=augment, visualize=visualize)
+        preds = model(im, augment=augment, visualize=visualize)
+        pred = preds[0]
+        seg_pred = preds[-1] if multi_task else None
+    
         t3 = time_sync()
         dt[1] += t3 - t2
 
@@ -143,7 +147,7 @@ def run(
                 s += f'{i}: '
             else:
                 p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
-                im0 = cv2.imread(f"/home/muchun/yolov5/version_1/masked_frames_v1/{Path(path).stem}.jpg")
+                # im0 = cv2.imread(f"/home/muchun/yolov5/version_1/masked_frames_v1/{Path(path).stem}.jpg")
 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg

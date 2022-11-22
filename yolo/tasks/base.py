@@ -16,28 +16,7 @@ class Base(pl.LightningModule):
         self.model = Model(cfg, ch=3, nc=nc)
         if "opt" in kwargs:
             self.opt = kwargs["opt"]
-            self.config()
     
-    def config(self):
-        opt = self.opt
-        self.hyp = hyp = opt.hyp
-        self.data_dict = check_dataset(opt.data)  # check if None
-        names = self.data_dict['names']
-        nc = int(self.data_dict['nc'])
-        self.gs = max(int(self.model.stride.max()), 32)
-        self.imgsz = check_img_size(opt.imgsz, self.gs, floor=self.gs * 2)
-
-        # number of detection layers (to scale hyps)
-        nl = self.model.model[-1].nl
-        hyp['box'] *= 3 / nl  # scale to layers
-        hyp['cls'] *= nc / 80 * 3 / nl  # scale to classes and layers
-        hyp['obj'] *= (self.imgsz / 640) ** 2 * 3 / nl
-        # scale to image size and layers
-        hyp['label_smoothing'] = opt.label_smoothing
-        self.model.nc = nc  # attach number of classes to model
-        self.model.hyp = hyp  # attach hyperparameters to model
-        self.model.names = names
-
     def forward(self, x, *args, **kwargs):
         return self.model(x, *args, **kwargs)
 
@@ -94,7 +73,6 @@ class Base(pl.LightningModule):
                     pg['delta'] = delta
 
         optimizer.step(closure=optimizer_closure)
-        
 
     def mannul_freeze(self, freeze_list=[0]):
         """
