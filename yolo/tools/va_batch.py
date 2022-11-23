@@ -22,14 +22,12 @@ def val_batch(batch, model, lossfunc=None, device=None, conf_thres=0.001, iou_th
         loss = torch.zeros(3, device=device)
         lossfunc.set_device(device)
         loss += lossfunc([x.float() for x in train_out], targets)[1]  # box, obj, cls
-
-    # dt, p, r, f1, mp, mr, map50, map = [0.0, 0.0, 0.0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-    # jdict, , ap, ap_class = [], [], [], []
+    
     stats = []
-
     iouv = torch.linspace(0.5, 0.95, 10, device=device)  # iou vector for mAP@0.5:0.95
     niou = iouv.numel()
-
+    
+    # targets:[[img_idx, cls_idx, x_center, y_center, w, h]]
     targets[:, 2:] *= torch.tensor((width, height, width, height), device=device)
     # some configs need to change.
     single_cls = False

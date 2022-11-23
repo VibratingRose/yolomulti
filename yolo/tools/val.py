@@ -80,11 +80,14 @@ def process_batch(detections, labels, iouv):
     """
     correct = np.zeros((detections.shape[0], iouv.shape[0])).astype(bool)
     iou = box_iou(labels[:, 1:], detections[:, :4])
-    correct_class = labels[:, 0:1] == detections[:, 5]
+    correct_class = labels[:, 0:1] == detections[:, 5] # num_labels x num_detections
     for i in range(len(iouv)):
         x = torch.where((iou >= iouv[i]) & correct_class)  # IoU > threshold and classes match
+        # torch.where(x,y,z)，则根据x中的条件适当数去y,z的值
+        # torch.where(x), 则返回满足条件的x中行号和列号
         if x[0].shape[0]:
-            matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()  # [label, detect, iou]
+            # matches = torch.cat((torch.stack(x, 1), iou[x][:, None]), 1).cpu().numpy()  # [label, detect, iou]
+            matches = torch.stack((*x, iou[x]), 1).cpu().numpy()
             if x[0].shape[0] > 1:
                 matches = matches[matches[:, 2].argsort()[::-1]]
                 matches = matches[np.unique(matches[:, 1], return_index=True)[1]]

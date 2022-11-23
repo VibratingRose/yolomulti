@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 
 train_aug = A.Compose([
     A.RandomCrop(p=1, height=544, width=544),
-    A.Flip(),
+    A.Flip(), # flip the image horizontally or vertically or both
     A.RandomRotate90(p=1.0),
     A.GaussNoise(p=0.2),
     A.ShiftScaleRotate(p=0.2),
