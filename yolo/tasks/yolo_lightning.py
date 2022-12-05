@@ -23,6 +23,7 @@ class YoloLightning(Base):
         if "opt" in kwargs:
             self.opt = kwargs["opt"]
             self.config()
+            self.mannul_load_ckpt(self.opt.pretrain)
 
     def forward(self, x, *args, **kwargs):
         return self.model(x, *args, **kwargs)
@@ -36,9 +37,9 @@ class YoloLightning(Base):
         self.loss.set_device(self.device)
         loss, loss_items = self.loss(preds, targets)
         # log
-        log_dict = {"box_loss": loss_items[0],
-                    "obj_loss": loss_items[1],
-                    "cls_loss": loss_items[2]}
+        log_dict = {"loss/box_loss": loss_items[0],
+                    "loss/obj_loss": loss_items[1],
+                    "loss/cls_loss": loss_items[2]}
 
         self.log_dict(log_dict, sync_dist=True, prog_bar=True, add_dataloader_idx=False)
         return {"loss": loss}
@@ -60,8 +61,8 @@ class YoloLightning(Base):
             ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
             mp, mr, map50, map95 = p.mean(), r.mean(), ap50.mean(), ap.mean()
         nt = np.bincount(stats[3].astype(int), minlength=self.nc)  # number of targets per class
-        self.log('map50', map50, sync_dist=True, prog_bar=False, add_dataloader_idx=False)
-        self.log('map95', map95, sync_dist=True, prog_bar=False, add_dataloader_idx=False)
+        self.log('metrics/map50', map50, sync_dist=True, prog_bar=False, add_dataloader_idx=False)
+        self.log('metrics/map95', map95, sync_dist=True, prog_bar=False, add_dataloader_idx=False)
 
     def train_dataloader(self):
         opt = self.opt
@@ -115,10 +116,10 @@ class YoloLightning(Base):
         # number of detection layers (to scale hyps)
         nl = self.model.model[-1].nl
         hyp['box'] *= 3 / nl  # scale to layers
-        hyp['cls'] *= self.nc / 80 * 3 / nl  # scale to classes and layers
+        hyp['cls'] *= self.nc / 80 * 3 / nl  # scale to classes and layers, why 80?
         hyp['obj'] *= (self.imgsz / 640) ** 2 * 3 / nl
         # scale to image size and layers
-        hyp['label_smoothing'] = opt.label_smoothing
+        hyp['label_smoothing'] = 0.0
         self.model.nc = self.nc  # attach number of classes to model
         self.model.hyp = hyp  # attach hyperparameters to model
         self.model.names = self.names

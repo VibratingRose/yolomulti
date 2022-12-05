@@ -1,0 +1,95 @@
+!!python/object:argparse.Namespace
+accumulate_grad_batches: 2
+artifact_alias: latest
+backbone_index: 10
+backbone_lr_ratio: 0
+batch_size: 16
+bbox_interval: -1
+bce_weight: 0.5
+cache: null
+cfg: configs/detseg.yolo.silu.v1.yaml
+cos_lr: false
+data: data/electronNetProject.yaml
+data_dict:
+  names:
+  - insulator
+  - crossArmPoint
+  - wirePoint
+  nc: 3
+  seg_train: /work/datasets/segmentation/train_1105.txt
+  seg_val: /work/datasets/segmentation/val_1105.txt
+  train:
+  - /work/datasets/electricNetworkProject/20220826/train.txt
+  - /work/datasets/electricNetworkProject/20220908/train.txt
+  - /work/datasets/electricNetworkProject/20220916/train.txt
+  - /work/datasets/electricNetworkProject/20220922/train.txt
+  val:
+  - /work/datasets/electricNetworkProject/20220826/val.txt
+  - /work/datasets/electricNetworkProject/20220908/val.txt
+  - /work/datasets/electricNetworkProject/20220916/val.txt
+  - /work/datasets/electricNetworkProject/20220922/val.txt
+det_weight: 1.0
+device: '0'
+entity: null
+epochs: 300
+exist_ok: false
+freeze:
+- 0
+hyp:
+  anchor_t: 4.0
+  anchors: 3
+  box: 0.05
+  cls: 0.000703125
+  cls_pw: 1.0
+  copy_paste: 0.0
+  degrees: 0.0
+  fl_gamma: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  iou_t: 0.2
+  label_smoothing: 0.0
+  lr0: 0.01
+  lrf: 0.01
+  mixup: 0.0
+  momentum: 0.937
+  mosaic: 1.0
+  obj: 1.0
+  obj_pw: 1.0
+  perspective: 0.0
+  scale: 0.5
+  shear: 0.0
+  translate: 0.1
+  warmup_bias_lr: 0.1
+  warmup_epochs: 3.0
+  warmup_momentum: 0.8
+  weight_decay: 0.0005
+image_weights: false
+imgsz: 640
+label_smoothing: 0.0
+lr: 0.01
+multi_scale: false
+name: exp
+nc: 3
+noautoanchor: false
+noplots: false
+nosave: true
+noval: true
+num_devices: 1
+optimizer: SGD
+project: runs/train
+quad: false
+rect: false
+resume: false
+save_dir: runs/train/exp
+seg_weight: 0.6
+single_cls: false
+split_train: false
+sync_bn: false
+task: MultiTaskv2
+upload_dataset: false
+warmup_steps: 300
+weights: weights/yolov5_state_dict_fpn_pretrain.ckpt
+workers: 8

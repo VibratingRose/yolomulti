@@ -1,0 +1,18 @@
+lr: 0.02
+pretrain: weights/yolov5_state_dict_fpn_pretrain.ckpt
+batch_size: 16
+accumulate_grad_batches: 4 # 64/batch_size, 
+momentum: 0.937  # SGD momentum/Adam beta1
+weight_decay: 5.0e-4  # optimizer weight decay
+warmup_steps: 300
+warmup_momentum: 0.9  # warmup initial momentum
+warmup_bias_lr: 0.1  # warmup initial bias lr
+label_smoothing: 0.1
+
+loss:
+  type: ComposeLoss
+  weight: [0.7, 0.3]
+  losses: [
+    ['BCEloss', None, 100000], #
+    ['DiceLoss', 2.0]
+  ]

@@ -8,11 +8,14 @@ import torch.nn as nn
 
 from yolo.utils.metrics import bbox_iou
 from yolo.utils.torch_utils import de_parallel
+from yolo.utils.register import Loss
+
 
 
 def smooth_BCE(eps=0.1):  # https://github.com/ultralytics/yolov3/issues/238#issuecomment-598028441
     # return positive, negative label smoothing BCE targets
     return 1.0 - 0.5 * eps, 0.5 * eps
+
 
 
 class BCEBlurWithLogitsLoss(nn.Module):
@@ -30,6 +33,7 @@ class BCEBlurWithLogitsLoss(nn.Module):
         alpha_factor = 1 - torch.exp((dx - 1) / (self.alpha + 1e-4))
         loss *= alpha_factor
         return loss.mean()
+
 
 
 class FocalLoss(nn.Module):

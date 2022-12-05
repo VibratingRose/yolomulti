@@ -1,31 +1,52 @@
 import pickle
+import random
 from pathlib import Path
 
 import albumentations as A
 import cv2
 import lmdb
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+
+class Dilation:
+    def __init__(self, ks=4, iter=1, p=0.5):
+        self.ks = ks
+        self.iter = iter
+        self.p = p
+
+    def __call__(self, image=None, mask=None):
+        assert mask is not None, "mask is none, please check"
+        if random.random() < self.p:
+            kernel = np.ones((self.ks, self.ks), np.uint8)
+            mask_ = cv2.dilate(mask, kernel, iterations=1)
+        return {"image": image, "mask": mask}
+
 train_aug = A.Compose([
-    A.RandomCrop(p=1, height=544, width=544),
-    A.Flip(), # flip the image horizontally or vertically or both
+    # A.RandomResizedCrop(576, 576),
+    A.RandomCrop(544, 544),
+    A.Flip(),
     A.RandomRotate90(p=1.0),
     A.GaussNoise(p=0.2),
     A.ShiftScaleRotate(p=0.2),
     A.OneOf([
         A.OpticalDistortion(p=0.3),
         A.GridDistortion(p=.1),
-    ], p=0.2),
+        # A.RandomGridShuffle(grid=(2, 2))
+    ], p=0.3),
     A.OneOf([
         A.CLAHE(clip_limit=2),
         A.RandomBrightnessContrast(),
-    ], p=0.1),
-    A.HueSaturationValue(p=0.3)
+    ], p=0.2),
+    A.HueSaturationValue(p=0.3),
+    # A.ChannelShuffle(p=0.5),
+    Dilation(p=1)
 ])
 
 val_aug = A.Compose([
     A.RandomCrop(p=1, height=544, width=960),
+    Dilation(p=1),
     A.Flip(),
 ])
 
@@ -41,15 +62,15 @@ class BaseDataset(Dataset):
         self.pairs = self.get_images_path(annpath)
         self.imgsz = imgsz if isinstance(
             imgsz, (tuple, list)) else [imgsz, imgsz]
-        
+
         # load images and labels from lmdb
         self.txn = None
         try:
             dbpath = Path(annpath) / "dbData"
             if dbpath.exists():
                 self.db = lmdb.open(dbpath, subdir=True,
-                    map_size= 1073741824 * 250, readonly=True,
-                    meminit=False, map_async=True)
+                                    map_size=1073741824 * 250, readonly=True,
+                                    meminit=False, map_async=True)
                 self.txn = self.begin()
         except:
             pass
@@ -90,7 +111,6 @@ class BaseDataset(Dataset):
         pairs = Path(annpath).read_text().splitlines()
         pairs = [l.split(",") for l in pairs]
         return pairs
-
 
 
 def get_dataloader(file_path=None, batch_size=8, num_workers=8, mode="train"):

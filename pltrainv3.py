@@ -19,28 +19,26 @@ ROOT = Path("./")
 def get_args(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--task', type=str, default='YoloLightning', help="choose the task")
+        '--task', type=str, default='YoloSeg', help="choose the task")
     parser.add_argument(
-        '--pretrain', type=str, default='weights/yolov5_state_dict.ckpt', help='initial weights path')
+        '--weights', type=str, default='weights/yolov5_state_dict.ckpt', help='initial weights path')
     parser.add_argument(
-        '--cfg', type=str, default="configs/yolov5s_silu.yaml", help='model.yaml path')
+        '--cfg', type=str, default="configs/detseg.yolov1.yaml", help='model.yaml path')
     parser.add_argument(
-        '--data', type=str, default='data/powergrid.yaml', help='dataset.yaml path')
+        '--data', type=str, default='data/electronNetProject.yaml', help='dataset.yaml path')
     parser.add_argument(
-        '--hyp', type=str, default='configs/hyp/hyp.scratch-low.yaml', help='hyperparameters path')
+        '--hyp', type=str, default='yolo/configs/hyps/hyp.scratch-low.yaml', help='hyperparameters path')
     parser.add_argument(
         '--epochs', type=int, default=300, help='total training epochs')
     parser.add_argument(
-        '--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
+        '--batch-size', type=int, default=8, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument(
         '--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
     parser.add_argument(
         '--rect', action='store_true', help='rectangular training')
-    parser.add_argument(
-        '--resume', nargs='?', const=True, default=False, help='resume most recent training')
 
     parser.add_argument('--warmup_steps', type=int, default=300)
-    parser.add_argument('--lr', type=float, default=0.02)
+    parser.add_argument('--lr', type=float, default=0.01)
 
     parser.add_argument(
         '--noautoanchor', action='store_true', help='disable AutoAnchor')
@@ -88,6 +86,19 @@ def get_args(known=False):
                         default=-1, help='accumulate_grad_batches')
 
     # for multitasks
+    parser.add_argument('--seg_weight', type=float, default=1.0,
+                        help='the weight for segmentation loss')
+    parser.add_argument('--det_weight', type=float, default=1.0,
+                        help='the weight for segmentation loss')
+    parser.add_argument('--bce_weight', type=float,
+                        default=0.7, help="the bce weight for seg_loss")
+    parser.add_argument('--split_train', action='store_true',
+                        help='to train det and seg in different batch')
+
+    parser.add_argument('--backbone_lr_ratio', type=float,
+                        default=0, help='to train det and seg in different batch')
+    parser.add_argument('--backbone_index', type=int, default=0,
+                        help='to train det and seg in different batch')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
@@ -97,10 +108,10 @@ def check_args():
     opt.data = check_file(opt.data)
     opt.cfg = check_yaml(opt.cfg)
     opt.hyp = check_yaml(opt.hyp)
-    # opt.weights = str(opt.weights)  # opt.weights 原本是 pathlib.PosixPath
-    # opt.project = str(opt.project)
-    # assert len(opt.cfg) or len(
-    #     opt.weights), 'either --cfg or --weights must be specified'
+    opt.weights = str(opt.weights)  # opt.weights 原本是 pathlib.PosixPath
+    opt.project = str(opt.project)
+    assert len(opt.cfg) or len(
+        opt.weights), 'either --cfg or --weights must be specified'
     if opt.name == 'cfg':
         opt.name = Path(opt.cfg).stem  # use model.yaml as name
     opt.save_dir = str(increment_path(
@@ -149,8 +160,6 @@ def check_args():
 
     opt.noval = True
     opt.nosave = True
-    opt.momentum = hyp['momentum']
-    opt.weight_decay = hyp['weight_decay']
 
     opt.data_dict = check_dataset(opt.data)  # check if None
     opt.nc = int(opt.data_dict['nc'])
@@ -162,10 +171,11 @@ def check_args():
 
 if __name__ == "__main__":
     opt = check_args()
-    seed_everything(3407)
     os.environ["CUDA_VISIBLE_DEVICES"] = opt.device
     opt.num_devices = len(opt.device.split(','))
-    model = Tasks[opt.task](opt.cfg, 3, opt.nc, opt=opt)
+    print(opt.task)
+    model = Tasks[opt.task](opt.cfg, 3, 3, opt=opt)
+    seed_everything(3407)
     trainer = pl.Trainer(
         max_epochs=opt.epochs,
         accelerator='gpu',

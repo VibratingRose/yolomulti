@@ -72,7 +72,7 @@ class Detect(nn.Module):
         return grid, anchor_grid
 
     def forward_for845(self, x):
-        z = []  # inference output
+        z = []  # inference outputs
         for i in range(self.nl):
             x[i] = self.m[i](x[i])  # conv
             bs, _, ny, nx = x[i].shape  # x(bs,255,20,20) to x(bs,3,20,20,85)
