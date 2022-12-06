@@ -74,7 +74,7 @@ def num_labels(cache):
 def filter_small(cache, threshhold=0.009375):
     pop_list = ['hash', 'version', 'msgs', 'results']
     new_cache = {}
-    threshhold = 12 / 960
+    threshhold = 12 / 960 # 这里相当于 640 上的8个像素
     for k, v in cache.items():
         if k in pop_list:
             continue
@@ -82,7 +82,7 @@ def filter_small(cache, threshhold=0.009375):
         if len(labels) == 0:
             continue
         h, w = labels[:, 3:5].T
-        keep = np.logical_and(w >threshhold, h> threshhold)
+        keep = np.logical_or(w >threshhold, h> threshhold)
         _labels = labels[keep]
         if len(_labels)> 0:
             new_cache[k] = (_labels, shapes, segments)
@@ -652,19 +652,19 @@ class LoadImagesAndLabels(Dataset):
             nl = len(labels)  # update after albumentations
 
             # HSV color-space
-            augment_hsv(img, hgain=hyp['hsv_h'], sgain=hyp['hsv_s'], vgain=hyp['hsv_v'])
+            # augment_hsv(img, hgain=hyp['hsv_h'], sgain=hyp['hsv_s'], vgain=hyp['hsv_v'])
 
             # Flip up-down
-            if random.random() < hyp['flipud']:
-                img = np.flipud(img)
-                if nl:
-                    labels[:, 2] = 1 - labels[:, 2]
+            # if random.random() < hyp['flipud']:
+            #     img = np.flipud(img)
+            #     if nl:
+            #         labels[:, 2] = 1 - labels[:, 2]
 
             # Flip left-right
-            if random.random() < hyp['fliplr']:
-                img = np.fliplr(img)
-                if nl:
-                    labels[:, 1] = 1 - labels[:, 1]
+            # if random.random() < hyp['fliplr']:
+            #     img = np.fliplr(img)
+            #     if nl:
+            #         labels[:, 1] = 1 - labels[:, 1]
             
             # Flip channel
             # flipchannel = hyp.get('flipchannel', 0)
@@ -736,6 +736,7 @@ class LoadImagesAndLabels(Dataset):
         for i, index in enumerate(indices):
             # Load image
             img, _, (h, w) = self.load_image(index)
+            labels, segments = self.labels[index].copy(), self.segments[index].copy()
 
             # place img in img4
             if i == 0:  # top left
@@ -757,7 +758,6 @@ class LoadImagesAndLabels(Dataset):
             padh = y1a - y1b
 
             # Labels
-            labels, segments = self.labels[index].copy(), self.segments[index].copy()
             if labels.size:
                 labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
                 segments = [xyn2xy(x, w, h, padw, padh) for x in segments]

@@ -134,6 +134,7 @@ def run(
         visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
         preds = model(im, augment=augment, visualize=visualize)
         pred = preds[0]
+        seg_pred = None
         if task == "multi":
             seg_pred = preds[-1]
         elif task == 'seg':

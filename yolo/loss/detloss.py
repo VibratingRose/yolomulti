@@ -121,6 +121,7 @@ class ComputeLoss:
         self.nl = m.nl  # number of layers
         self.anchors = m.anchors
         self.device = device
+        self.target_jitter = False
     
     def set_device(self, device):
         self.device = device
@@ -133,6 +134,14 @@ class ComputeLoss:
         lcls = torch.zeros(1, device=self.device)  # class loss
         lbox = torch.zeros(1, device=self.device)  # box loss
         lobj = torch.zeros(1, device=self.device)  # object loss
+
+        if self.target_jitter:
+            """some error occured in these code, cls loss disappear"""
+            jitter = torch.rand(6, device=self.device)/100
+            jitter = torch.clamp(jitter, 0.001, 0.005)
+            jitter[0:2] = torch.tensor([1,1], device=self.device)
+            targets = targets * jitter
+
         tcls, tbox, indices, anchors = self.build_targets(p, targets)  # targets
 
         for i, pi in enumerate(p):  # layer index, layer predictions
