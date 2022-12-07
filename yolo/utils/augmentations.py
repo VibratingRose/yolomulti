@@ -38,7 +38,7 @@ class Albumentations:
                     A.RandomRain(),
                     A.RandomSunFlare(src_radius=100),
                     A.RandomSnow(),
-                ], p=0.3), # added 12.06
+                ], p=0.1), # added 12.06
                 A.ChannelShuffle(),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_lower=75, p=0.1)]  # transforms
